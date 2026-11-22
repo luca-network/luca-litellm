@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "luca-litellm"
+version = "0.1.0"
+description = "Send the cost of each LiteLLM call to Luca for accounting, without prompts or responses"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Luca", email = "hello@luca.network" }]
+requires-python = ">=3.9"
+dependencies = ["litellm>=1.70", "httpx>=0.27"]
+keywords = ["litellm", "ai spend", "accounting", "finops", "cost of revenue", "llm cost", "gateway"]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Office/Business :: Financial :: Accounting",
+]
+
+[project.urls]
+Homepage = "https://luca.network/developers"
+Documentation = "https://luca.network/developers#litellm"
+Repository = "https://github.com/luca-network/luca-litellm"
+
+[tool.setuptools]
+packages = ["luca_litellm"]
+license-files = ["LICENSE", "NOTICE"]
