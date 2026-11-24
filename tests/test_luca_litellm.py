@@ -47,6 +47,17 @@ def test_only_the_fields_accounting_needs_leave_the_proxy():
     assert to_record(None) is None and to_record({"status": "success"}) is None
 
 
+def test_litellm_customer_hierarchy_is_kept_without_the_members_name():
+    """LiteLLM's customer hierarchy (v1.111): organization and team with their aliases, the member's ID only."""
+    md = {"user_api_key_customer_org_id": "org-acme", "user_api_key_customer_org_alias": "Acme",
+          "user_api_key_customer_team_id": "acme-support", "user_api_key_customer_team_alias": "Support",
+          "user_api_key_customer_member_id": "acme-alice", "user_api_key_customer_member_alias": "Alice"}
+    r = to_record({**PAYLOAD, "end_user": None, "metadata": {**PAYLOAD["metadata"], **md}})
+    kept = {k: v for k, v in r["metadata"].items() if "customer" in k}
+    assert kept == {k: v for k, v in md.items() if k != "user_api_key_customer_member_alias"}
+    assert "Alice" not in json.dumps(r)
+
+
 class Receiver:
     """A local stand-in for Luca's webhook: records each delivery, and can fail the first few."""
 

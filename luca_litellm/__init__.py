@@ -29,7 +29,7 @@ import httpx
 from litellm.integrations.custom_logger import CustomLogger
 
 __all__ = ["LucaLogger", "to_record", "handler", "__version__"]
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 log = logging.getLogger("luca_litellm")
 
@@ -44,6 +44,10 @@ _META = (
     "user_api_key_hash", "user_api_key_alias", "user_api_key_team_id", "user_api_key_team_alias",
     "user_api_key_user_id", "user_api_key_project_id", "user_api_key_project_alias", "user_api_key_end_user_id",
     "user_api_key_org_id", "user_api_key_org_alias", "team_id", "team_alias",
+    # LiteLLM's customer hierarchy (v1.111): the customer organization, its team and the member's ID (not the member's
+    # alias, which is often a person's name).
+    "user_api_key_customer_org_id", "user_api_key_customer_org_alias", "user_api_key_customer_team_id",
+    "user_api_key_customer_team_alias", "user_api_key_customer_member_id",
 )
 # From the usage object: only the cached-token counts, which change the cost.
 _USAGE = ("cache_read_input_tokens", "cache_creation_input_tokens")
