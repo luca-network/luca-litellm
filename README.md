@@ -22,13 +22,27 @@ Only the fields accounting needs leave your network: when the call was made, the
    LUCA_LITELLM_URL=<the webhook URL Luca shows>
    LUCA_LITELLM_TOKEN=<the ingest token>
    ```
-5. Restart the proxy.
+5. Check the address and token work. With the two variables set:
+   ```
+   luca-litellm check
+   ```
+   It sends Luca one test record, which Luca answers and never counts as usage.
+6. Restart the proxy.
 
 The plugin sends calls in batches (every 10 seconds, or every 200 calls), outside the request path, so it adds no time to your calls. If Luca can't be reached, it keeps the calls and tries again.
 
-## Which customer a call served
+## Which customer a call served, and what it was for
 
 LiteLLM records a customer for each call when your app passes `user` in the request, or when the call uses a key or team set up for that customer. Luca uses it to show AI cost by customer.
+
+- Send the customer's ID in `user`, as it appears in your ERP's customer list, so cost of revenue can name the customer.
+- Tag each request with what it is for, for example `product`, `research` or `internal`. Finance maps each tag to an account.
+- Calls with neither go to unallocated AI expense until finance maps them. Luca's month report shows the share of cost that has a function and a customer.
+
+```python
+client.chat.completions.create(model="gpt-4o", messages=messages, user="acme-corp",
+                               extra_body={"metadata": {"tags": ["product"]}})
+```
 
 ## Options
 

@@ -149,3 +149,38 @@ def test_a_real_litellm_call_through_the_callback():
                 json.dump(rx.deliveries[0], f, indent=1)
     finally:
         rx.close()
+
+
+class CheckReceiver:
+    """Luca's answer to a setup check: the check sentence for the right token, 401 for any other."""
+
+    def __init__(self, token="tok_ok", answer=b'{"received":1,"stored":0,"check":"Luca received the check: this proxy\'s address and token work"}'):
+        self.bodies = []
+        outer = self
+
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                outer.bodies.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+                good = self.headers.get("Authorization") == f"Bearer {token}"
+                self.send_response(200 if good else 401); self.send_header("content-type", "application/json"); self.end_headers()
+                self.wfile.write(answer if good else b'{"error":"invalid token"}')
+
+            def log_message(self, *a):
+                pass
+
+        self.server = HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.server.server_port}/v1/hooks/litellm/rc_1"
+
+
+def test_check_proves_the_address_and_token_and_sends_no_call():
+    from luca_litellm import check
+    from luca_litellm.__main__ import main
+    r = CheckReceiver()
+    ok, said = check(r.url, "tok_ok")
+    assert ok and "address and token work" in said
+    assert r.bodies[0][0]["luca_check"] is True and set(r.bodies[0][0]) == {"luca_check", "id"}, "only the check, no call"
+    ok, said = check(r.url, "tok_wrong")
+    assert not ok and "LUCA_LITELLM_TOKEN" in said
+    assert check(None, None)[0] is False
+    assert main(["help"]) == 2

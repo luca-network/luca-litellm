@@ -22,14 +22,15 @@ import atexit
 import logging
 import os
 import threading
+import uuid
 from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
 from litellm.integrations.custom_logger import CustomLogger
 
-__all__ = ["LucaLogger", "to_record", "handler", "__version__"]
-__version__ = "0.1.1"
+__all__ = ["LucaLogger", "to_record", "handler", "check", "__version__"]
+__version__ = "0.1.2"
 
 log = logging.getLogger("luca_litellm")
 
@@ -239,6 +240,36 @@ class LucaLogger(CustomLogger):
                 self.flush()
         except Exception:
             log.exception("luca_litellm: could not record a call")
+
+
+def check(url: str | None = None, token: str | None = None, timeout: float = 10.0) -> tuple[bool, str]:
+    """Send Luca one test record, which it answers and doesn't store, to prove the address and token work.
+
+    Returns whether it worked and a sentence saying what happened. Run it as: luca-litellm check
+    """
+    url = url or os.environ.get("LUCA_LITELLM_URL")
+    token = token or os.environ.get("LUCA_LITELLM_TOKEN")
+    if not url or not token:
+        return False, "Set LUCA_LITELLM_URL and LUCA_LITELLM_TOKEN first, as the Luca connection shows them."
+    try:
+        res = httpx.post(url, json=[{"luca_check": True, "id": f"luca-check-{uuid.uuid4()}"}], timeout=timeout,
+                         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
+                                  "User-Agent": f"luca-litellm/{__version__}"})
+    except httpx.HTTPError as e:
+        return False, f"Could not reach Luca at {_host(url) or url}: {e}"
+    if res.status_code == 401:
+        return False, "Luca refused the token. Check LUCA_LITELLM_TOKEN is the ingest token you gave this connection."
+    if res.status_code == 404:
+        return False, "Luca doesn't know this connection. Check LUCA_LITELLM_URL is the webhook address the connection shows."
+    if res.status_code >= 300:
+        return False, f"Luca answered {res.status_code}: {res.text[:300]}"
+    try:
+        said = res.json().get("check")
+    except ValueError:
+        said = None
+    if not said:
+        return False, "Luca answered, but not to a check. Is LUCA_LITELLM_URL the webhook address the connection shows?"
+    return True, f"{said}. Real calls will arrive once the proxy has callbacks: [\"luca_litellm.handler\"] in its config."
 
 
 # The instance the proxy's config names: callbacks: ["luca_litellm.handler"]
